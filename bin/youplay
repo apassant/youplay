@@ -1,0 +1,39 @@
+#!/usr/bin/env python
+
+"""Helper script for YouPlay. Run youplay.py for details."""
+
+# Author: Alexandre Passant - apassant.net
+# Licensed: MIT - see LICENSE.txt
+
+import argparse
+import json
+import os
+
+import youplay
+
+if __name__ == '__main__':
+    # Parse arguments
+    env = youplay.ENVIRON
+    description = "Extract who's and what's playing - artist(s) and track(s) - from a YouTube music video. %s" %(env)
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument('yid', help="the YouTube video ID, e.g. '0UjsXo9l6I8'")
+    args = parser.parse_args()
+    # Check key
+    key = os.environ.get('YOUPLAY_GOOGLE_KEY')
+    assert key, env
+    # Run youplay extraction
+    (artists, tracks) = youplay.extract(args.yid)
+    # JSONify output
+    data = {}
+    if artists:
+        data.update({'artists' : [{
+        'mid' : artist.mid, 
+        'name' : artist.name
+    } for artist in artists]})
+    if tracks:
+        data.update({'tracks' : [{
+        'mid' : track.mid, 
+        'name' : track.name
+    } for track in tracks]})
+    print json.dumps(data, indent=2)
+
