@@ -2,7 +2,7 @@ import os
 
 import requests
 
-from freebase import Entity, Recording, Artist
+from freebase import Entity#, Recording, Artist
 from __init__ import YouPlay, YOUPLAY_GOOGLE_KEY, ENVIRON
 
 YOUTUBE_VIDEOS = 'https://www.googleapis.com/youtube/v3/videos'
@@ -10,8 +10,11 @@ YOUTUBE_SEARCH = 'https://www.googleapis.com/youtube/v3/search'
 
 class Video(YouPlay):
 
+    """A YouTube video, identified by its yid."""
+
     def __init__(self, yid, recurse=True):
         """The Video object. Built from a YouTube video ID"""
+        self.set_api_key()
         self.yid = yid
         self.video = None
         self.title = None
@@ -19,15 +22,12 @@ class Video(YouPlay):
         self.artists = []
         self.tracks = []
         self._recurse = recurse
-        self.set_api_key()
         
     def _add_entity(self, entity):
         """Add an entity in the list of tracks of artists, depending on its type"""
         if entity.has_type('/music/recording'):
-            entity.__class__ = Recording
             self.tracks.append(entity)
         elif entity.has_type('/music/artist'):
-            entity.__class__ = Artist
             self.artists.append(entity)
 
     def _related(self):
@@ -55,7 +55,7 @@ class Video(YouPlay):
             'part':"id,snippet,topicDetails",
             'key': self.api_key
         })
-        if request.status_code == 200: 
+        if request.status_code == 200:
             data = request.json()
             if data.get('items'):
                 # Assign video and title
@@ -70,13 +70,14 @@ class Video(YouPlay):
         return
         
     def _no_artist_no_track(self):
-        # Don't try to extract anything from a non-music video, unless explicitely asked for
+        """Find who's playing when we have no artist and no tracks availalbe"""
+        # Don't try to extract anything from a non-music video
         if int(self.video['snippet'].get('categoryId', 0)) != 10:
             return
         related = {}
         for video in self._related():
-            (artist, track) = video.get_music_data()
-            if artist:
+            (artists, tracks) = video.get_music_data()
+            for artist in artists:
                 key = artist.mid
                 related.setdefault(key, {
                     'artist': artist,
@@ -86,68 +87,82 @@ class Video(YouPlay):
         if not related:
             return
         sorted_ = sorted(related.values(), key=lambda x: x['count'], reverse=True)
-        self.artists = sorted_[0:1]['artist']
+        self.artists = [sorted_[0]['artist']]
         return self._one_artist_no_track()
         
     def _no_artist_one_track(self):
-        self.tracks = self.tracks[0:1]
+        """Find who's playing when we have no artist and one track availalbe"""
+        self.tracks = self.tracks[:1]
         self.artists = self.track.get_artists()
         return self._x_artists_one_track()
         
     def _no_artist_x_tracks(self):
-        self.tracks = self.tracks[0:1]
+        """Find who's playing when we have no artist and multiple tracks availalbe"""
+        self.tracks = self.tracks[:1]
         return
         
     def _one_artist_no_track(self):
-        self.artists = self.artists[0:1]
+        """Find who's playing when we have one artist and no track availalbe"""
+        self.artists = self.artists[:1]
         title = self.title.replace(self.artists[0].name.lower(), '')
         tracks = [t for t in self.artists[0].get_tracks() if t.name and t.name.lower() in title]
         if len(tracks) == 0:
             return
         elif len(tracks) == 1:
-            self.tracks = _tracks[0:1]
+            self.tracks = tracks[:1]
         else:
             for type_ in ['/music/single', '/media_common/cataloged_instance']:
                 _tracks = [t for t in tracks if type_ in t.types]
                 if _tracks:
-                    self.tracks = _tracks[0:1]
+                    self.tracks = tracks[:1]
         return
         
     def _one_artist_one_track(self):
-        self.artists = self.artists[0:1]
-        self.tracks = self.tracks[0:1]
+        """Find who's playing when we have one artist and one track available.
+        Assume they're OK."""
+        self.artists = self.artists[:1]
+        self.tracks = self.tracks[:1]
         return
         
     def _one_artist_x_tracks(self):
-        self.artists = self.artists[0:1]
+        """Find who's playing when we have one artist and multiple tracks available.
+        Need to find a use-case for testing."""
+        self.artists = self.artists[:1]
         return
 
     def _x_artists_no_track(self):
+        """Find who's playing when we have multiple artists and no track available."""
         artists = [a for a in self.artists if a.name and a.name.lower() in self.title]
         if len(artists) == 0:
             return
         if len(artists) == 1:
-            self.artists = artists[0:1]
+            self.artists = artists[:1]
             return self._one_artist_no_track()
         return
         
     def _x_artists_one_track(self):
-        self.tracks = self.tracks[0:1]
-        artists = [a for a in self.tracks[0].get_artists() if a in self.artists]
+        """Find who's playing when we have multiple artists and one track available."""
+        self.tracks = self.tracks[:1]
+        # Filter artists by track artists + artists included in the video title, and get the union
+        track_artists = [a for a in self.tracks[0].get_artists() if a in self.artists]
+        title_artists = [a for a in self.artists if a.name.lower() in self.title]
+        artists = list(set(track_artists) | set(title_artists))
         if len(artists) == 0:
             return self._no_artist_one_track()
         elif len(artists) == 1:
-            self.artists = artists[0:1]
-            return self._one_artist_one_track()
+            self.artists = artists[:1]
+        else:
+            self.artists = artists
         return
         
     def _x_artists_x_tracks(self):
+        """Find who's playing when we have multiple artists and multiple tracks available.
+        Need to find a use-case for testing."""
         return
         
     def _apply_heuristics(self):
         """Apply a set of heuristics to identify the correct (artist, track) combo"""
         num_artists, num_tracks = (len(self.artists), len(self.tracks))
-        print (num_artists, num_tracks)
         if num_artists == 0:
             h = (num_tracks == 0 and self._no_artist_no_track) \
                       or (num_tracks == 1 and self._no_artist_one_track) \
@@ -155,7 +170,7 @@ class Video(YouPlay):
         elif num_artists == 1:
             h = (num_tracks == 0 and self._one_artist_no_track) \
                       or (num_tracks == 1 and self._one_artist_one_track) \
-                      or self._one_artst_x_tracks
+                      or self._one_artist_x_tracks
         else:
             h = (num_tracks == 0 and self._x_artists_no_track) \
                       or (num_tracks == 1 and self._x_artists_one_track) \
@@ -169,5 +184,4 @@ class Video(YouPlay):
         if self.video:
             self._apply_heuristics()
         return (self.artists, self.tracks)
-
 

@@ -9,27 +9,26 @@ FREEBASE_MQL = 'https://www.googleapis.com/freebase/v1/mqlread'
 COVER_MID = 'm/014_42'
 
 class Entity(YouPlay):
+    """A Freebase entity, identified by its mid."""
     
     def __init__(self, mid, name=None, types=[], lookup=True):
+        self.set_api_key()
         self.mid = mid
         self.name = name
         self.types = types
-        self.set_api_key()
         if lookup:
             self._lookup()
     
     def __eq__(self, other):
+        """Two entities are equal if they have the same mid"""
         return isinstance(other, Entity) and self.mid == other.mid
-
+    def __hash__(self):
+        """Use mid as a base for hash, in order to filter duplicate in sets"""
+        return hash(self.mid)
+        
     def __str__(self):
         return "%s [%s]" %(self.name, self.mid)
     __repr__ = __str__
-
-    def jsonify(self):
-        return {
-            'mid' : self.mid,
-            'name' : self.name
-        }
 
     def _get_data(self, properties=None, relations=None):
         """Get entity data from Freebase, either values or relations."""
@@ -57,17 +56,19 @@ class Entity(YouPlay):
                 }]
             })
         request = requests.get(FREEBASE_MQL, params={
-            'query': json.dumps(query), 
+            'query': json.dumps(query),
             'key': self.api_key
         })
-        if request.status_code == 200: 
+        if request.status_code == 200:
             return request.json()['result']
         return {}
 
     def get_properties(self, properties):
+        """Call Freebase API to get properties"""
         return self._get_data(properties=properties)
 
     def get_relations(self, relations, properties=None):
+        """Call Freebase API to get relations"""
         data = self._get_data(relations=[relations])
         if data:
             return [Entity(d.get('mid'), d.get('name'), d.get('type'), False) for d in data[relations]]
@@ -85,10 +86,12 @@ class Entity(YouPlay):
                 return True
         return False
 
-class Artist(Entity):
+#class Artist(Entity):
     def get_tracks(self):
+        """Get tracks for an entity."""
         return self.get_relations('/music/artist/track', ['/music/recording/artist'])
 
-class Recording(Entity):
+#class Recording(Entity):
     def get_artists(self):
+        """Get artists for an entity."""
         return self.get_relations('/music/recording/artist')
