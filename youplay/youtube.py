@@ -1,8 +1,14 @@
+"""EchoPlot - Plot loudness of a song using the EchoNest API."""
+
+# Author: Alexandre Passant - apassant.net
+# (c) 2014 MDG Web Ltd. - mdg.io / seevl.fm
+# Licensed: MIT - see LICENSE.txt
+
 import os
 
 import requests
 
-from freebase import Entity#, Recording, Artist
+from freebase import Entity
 from __init__ import YouPlay, YOUPLAY_GOOGLE_KEY, ENVIRON
 
 YOUTUBE_VIDEOS = 'https://www.googleapis.com/youtube/v3/videos'
@@ -97,13 +103,14 @@ class Video(YouPlay):
         return self._x_artists_one_track()
         
     def _no_artist_x_tracks(self):
-        """Find who's playing when we have no artist and multiple tracks availalbe"""
+"""YouPlay - Extract who's and what's playing - artist(s) and track(s) - from a YouTube music video."""
         self.tracks = self.tracks[:1]
         return
         
     def _one_artist_no_track(self):
         """Find who's playing when we have one artist and no track availalbe"""
         self.artists = self.artists[:1]
+        # Remove artist name from title and find if there's a matching track
         title = self.title.replace(self.artists[0].name.lower(), '')
         tracks = [t for t in self.artists[0].get_tracks() if t.name and t.name.lower() in title]
         if len(tracks) == 0:

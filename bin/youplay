@@ -3,6 +3,7 @@
 """Helper script for YouPlay. Run youplay.py for details."""
 
 # Author: Alexandre Passant - apassant.net
+# (c) 2014 MDG Web Ltd. - mdg.io / seevl.fm
 # Licensed: MIT - see LICENSE.txt
 
 import argparse

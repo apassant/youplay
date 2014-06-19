@@ -1,3 +1,9 @@
+"""YouPlay - Extract who's and what's playing - artist(s) and track(s) - from a YouTube music video."""
+
+# Author: Alexandre Passant - apassant.net
+# (c) 2014 MDG Web Ltd. - mdg.io / seevl.fm
+# Licensed: MIT - see LICENSE.txt
+
 YOUPLAY_GOOGLE_KEY = 'YOUPLAY_GOOGLE_KEY'
 ENVIRON = "You need to set-up your Google API key as %s environment variable" %(YOUPLAY_GOOGLE_KEY)
 
