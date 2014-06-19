@@ -28,3 +28,4 @@ Note that your Google API key must be set as an environment variable: `YOUPLAY_G
 If you don't have a key, register at [code.google.com/apis/console/](https://code.google.com/apis/console/)
 and register for the YouTube Data API v3 and the Freebase API.
 
+Contact, infos, related hacks: [apassant.net](http://apassant.net/) and [mdg.io](http://mdg.io/)
