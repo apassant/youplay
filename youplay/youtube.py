@@ -1,4 +1,4 @@
-"""EchoPlot - Plot loudness of a song using the EchoNest API."""
+"""YouPlay - Extract who's and what's playing - artist(s) and track(s) - from a YouTube music video."""
 
 # Author: Alexandre Passant - apassant.net
 # (c) 2014 MDG Web Ltd. - mdg.io / seevl.fm
@@ -103,7 +103,7 @@ class Video(YouPlay):
         return self._x_artists_one_track()
         
     def _no_artist_x_tracks(self):
-"""YouPlay - Extract who's and what's playing - artist(s) and track(s) - from a YouTube music video."""
+        """Find who's playing when we have no artist and multiple tracks availalbe"""
         self.tracks = self.tracks[:1]
         return
         
